@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+  
+  <head>
+    <meta charset="utf-8" />
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+
+    <!--https://mdbootstrap.com/docs/jquery/javascript/scroll/-->
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #ffffb7;
+      }
+
+      .col-8{
+        background-color: #d6eadf;
+      }
+      .col-4{
+        background-color: #b8e0d2;
+      }
+      ul{
+        padding: 20px;
+      }
+      li{
+        list-style-type: none;
+      }
+      li:nth-child(odd){
+        background: #bfdbd2;
+      }
+      .h-90{
+        position: absolute;
+        overflow-y: scroll;
+      }
+
+      .left{
+        height: 85vh;
+        overflow: hidden;
+        overflow-y: scroll; 
+      }
+
+      .right{
+        height: 85vh;
+      }
+
+      .row{
+        font-size: 27px
+      }
+      
+      .scrollbar-primary::-webkit-scrollbar {
+        width: 12px;
+        background-color: #F5F5F5; 
+      }
+
+      .scrollbar-primary::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background-color: #40916c;
+       }
+
+
+    </style>
+    
+  </head>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script>
+  $(function () {
+
+    var socket = io();
+  
+
+    $('form').submit(function(e){
+      e.preventDefault(); // prevents page reloading
+      var a = {message: $('#m').val(), id: 0}
+      socket.emit('chat message', a);
+      $('#m').val('')
+      return false;
+    });
+
+
+
+
+
+    socket.on("online users", function(users){
+      //delete the div
+      $("#onlineUsers").remove()
+      //re make the div
+      $(".onlineList").append("<ul id = onlineUsers style=width: 100%; ></ul>")
+
+      for(i = 0; i <users.length; i++){
+        currentUser = users[i];
+        $("#onlineUsers").append($('<li>').text(currentUser))
+      }
+
+    });
+
+    //chat log when someone new joins
+    socket.on("chat log", function(log){
+      let userAndText = log.message
+      let tempName = "User " + log.id + ":"
+      let subMessage = userAndText.substring(tempName.length + 1, userAndText.length)
+
+      $('#messages').append($('<li>').attr("id", log.id).append("[" + log.time + "]" + " " + "<span class= '" + 's' + log.id + "' >"+log.id + ":"+'</span>' + " " + subMessage));
+      $("span.s" + log.id).css("color", log.color)
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+    })
+
+    //show ur own user id
+    socket.on('intro message', function(introM){
+      $('#messages').append($('<li>').attr("id", introM).text("You are user " + introM));
+      $("#" + introM).css("font-weight", "bold")
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+    });
+
+
+
+    //others will know if you joined
+    socket.on('intro message others', function(introM){
+      $('#messages').append($('<li>').attr("id", introM).text("User " + introM +  " has joined"));
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+      
+    });
+
+    //if name taken
+
+    socket.on('same name', function(sameName){
+      $('#messages').append($('<li>').attr("id", sameName).text("You have the same name " + sameName).css("font-weight", "bold"));
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+  
+    });
+
+    //if name taken
+    socket.on('name taken', function(newName){
+      $('#messages').append($('<li>').attr("id", newName).text(newName + " Is already taken").css("font-weight", "bold"));
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+    });
+    //let users know the name changed
+    socket.on('name change', function(changeName){
+      $('#messages').append($('<li>').attr("id", changeName).text("Your user ID is now " + changeName ).css("font-weight", "bold"));
+      $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+    });
+
+    //append the message
+    socket.on('chat message', function(msg){
+      let userAndText = msg.message
+      let tempName = "User " + msg.id + ":"
+      let subMessage = userAndText.substring(tempName.length + 1, userAndText.length)
+
+      if(msg.color === "#000000"){
+        $('#messages').append($('<li>').attr("id", msg.id).append("[" + msg.time + "]" + " " + "<span class= '" + 's' + msg.id + "' >"+msg.id + ":"+'</span>' + " " + subMessage));
+        $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+      }
+      else{
+        $('#messages').append($('<li>').attr("id", msg.id).append("[" + msg.time +  "]"+ " " + "<span class= '" + 's' + msg.id + "' >"+msg.id + ":"+'</span>' + " " + subMessage));
+        $("span.s" + msg.id).css("color", msg.color)
+        $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+      }
+    });
+
+    //append the message but bolded
+    socket.on('chat message self', function(msgSelf){
+      let userAndText = msgSelf.message
+      let tempName = "User " + msgSelf.id + ":"
+      let subMessage = userAndText.substring(tempName.length + 1, userAndText.length)
+
+      if(msgSelf.color === "#000000"){
+        $('#messages').append($('<li>').attr("id", msgSelf.id).css("font-weight", "bold").append("[" + msgSelf.time + "]" + " " + "<span class= '" + 's' + msgSelf.id + "' >"+msgSelf.id + ":"+ '</span>' + " " + subMessage));
+        //refernce used for scrolling text to bottom
+        //https://stackoverflow.com/questions/10503606/scroll-to-bottom-of-div-on-page-load-jquery
+        $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+      }
+      else{
+        $('#messages').append($('<li>').attr("id", msgSelf.id).css("font-weight", "bold").append("[" + msgSelf.time +"]"+ " " + "<span class= '" + 's' + msgSelf.id + "' >"+msgSelf.id+":"+'</span>' + " " + subMessage));
+        $("span.s" + msgSelf.id).css("color", msgSelf.color)
+        $('.scrollbar').scrollTop($('.scrollbar').prop("scrollHeight"));
+      }
+    });
+
+    //change color of username
+
+    socket.on('change color', function(color){
+      color.past.forEach(element => {
+        $("span.s" + element).css("color", color.color)
+      });
+    })
+
+    socket.on('update name', function(nameList){
+      recentName = nameList.pop()
+      nameList.forEach(element => {
+        $("span.s" + element).text(recentName +": ")
+      });
+    });
+
+
+    
+  });
+</script>
+  <body>
+
+    <div class="container-fluid">
+      <div class="page-header text-center">
+        <h1>Welcome to SUPER CHAT</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-8 left scrollbar-primary scrollbar">
+          <ul class="wrap-text" id="messages" style="width: 100%;"></ul>
+        </div>
+
+        <div class="col-4 right">
+          <div class="text-center font-weight-bold onlineList">
+            Online Users
+            <ul id="onlineUsers"style="width: 100%;"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="fixed-bottom">
+          <form action="">
+            <div class="form-group border border-dark">
+              <input id="m" autocomplete="off" class="form-control form-control-lg" placeholder="Enter message">
+            </div>
+          </form>
+        </div>
+      </div>
+    
+
+
+
+
+    </div>
+  </body>
+</html>
