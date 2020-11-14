@@ -2,4 +2,4 @@
 SENG513 A3
 
 npm install
-localhost:3000
+run on localhost:3000
