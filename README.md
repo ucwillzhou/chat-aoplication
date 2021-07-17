@@ -1,8 +1,5 @@
 # chat-application
-SENG513 A3
-
+SENG Assignment
 npm install
-
-
 run on localhost:3000
 
